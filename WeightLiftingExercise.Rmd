@@ -1,0 +1,74 @@
+---
+title: "Weight Lifting Exercise Effectiveness Report"
+author: "KimSia Sim"
+date: "24 August, 2014"
+output: html_document
+---
+
+# Synopsis
+
+Devices such as Jawbone Up, Nike FuelBand, and Fitbit allow the collection of a large amount of data on personal activity in a relatively inexpensive way. These devices are part of the quantified self (QS) movement – enthusiasts who take measurements about themselves regularly to improve health, find patterns in their behavior, or simply because they are geeks. Quantifying how often they perform an activity is one thing. Quantifying **how well** is another. In this report, I attempt to perform machine learning algorithms on data coming from the accelerometers on the belt, forearm, arm, and dumbell of 6 participants. These participants performed barbell lifts correctly and incorrectly in 5 different ways. 
+
+Data is credited to be from : [http://groupware.les.inf.puc-rio.br/har](http://groupware.les.inf.puc-rio.br/har)
+
+```{r echo=F}
+source('WeightLiftingExercise.R')
+```
+
+## Preprocessing data
+
+The following steps were taken to sanitize the data received:
+
+ 1. Replace excel division error strings `#DIV/0!` with `NA` values.
+ 2. Replace empty strings with `NA` values.
+
+## Selecting Feature
+
+I explore the processed data to narrow down to the more probably useful data to feed into the model. To allow model to generalize well with as yet unknown data, it is important that I perform the following actions:
+
+ 1. Remove all features containing NA values.
+ 2. Remove columns that appear to be not relevant (e.g. user_name) 
+ 
+ The removal of the columns is because any correlation that is found for these columns may cause poor performance on the model.
+
+The removed columns include:
+
+1. the not labelled row index
+2. `user_name`
+3. `raw_timestamp_part_1`
+4. `raw_timestamp_part_2`
+5. `cvtd_timestamp`
+6. `new_window`
+7. `num_window`
+
+## Cross Validation
+
+I cross validate the model by dividing the training data into a testing set and a training set.
+
+```{r cross_validate}
+training_data <- createDataPartition(training_features$classe, p=.60, list=FALSE)
+
+train_set <- training_features[training_data[,1]]
+test_set <- training_features[-training_data[,1]]
+```
+
+I partition the data by the `classe` variable.
+
+This is to ensure the training set and testing set contain examples of each class. I allocate 60% of training data to the training set and the remainder for the testing set for validation.
+
+## Prediction
+
+At the beginning, I used *random forest model* for prediction purposes.
+
+```{r train, echo=F}
+model_rf <- train(y=as.factor(train_set$classe), x=train_set[,!"classe",with=F], tuneGrid=data.frame(mtry=3), trControl=trainControl(method="none"), method="parRF")
+```
+
+```{r confusion_matrix, echo=F}
+confusionMatrix(predict(model_rf, newdata=transform_features(test_set)), factor(test_set$classe))
+```
+
+
+## Report Conclusion
+
+Random forest algorithm appears to perform well for predicting activities from accelerometers measurements.
